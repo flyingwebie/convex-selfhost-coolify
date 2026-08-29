@@ -39,7 +39,7 @@ services:
   # exports, modules and search indexes
   # ──────────────────────────────────────────────────────────────
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.0-rc.4
     command: /data
     environment:
       - SERVICE_URL_RUSTFS_9000
@@ -63,7 +63,7 @@ services:
   # One-shot init job — creates the 5 buckets Convex needs in RustFS
   # ──────────────────────────────────────────────────────────────
   rustfs-init:
-    image: amazon/aws-cli:latest
+    image: amazon/aws-cli:2.36.34
     depends_on:
       rustfs:
         condition: service_healthy
@@ -85,7 +85,7 @@ services:
   # Convex backend
   # ──────────────────────────────────────────────────────────────
   backend:
-    image: ghcr.io/get-convex/convex-backend:latest
+    image: ghcr.io/get-convex/convex-backend:precompiled-2026-08-29-1733af0
     depends_on:
       postgres:
         condition: service_healthy
@@ -137,7 +137,7 @@ services:
   # Convex dashboard
   # ──────────────────────────────────────────────────────────────
   dashboard:
-    image: ghcr.io/get-convex/convex-dashboard:latest
+    image: ghcr.io/get-convex/convex-dashboard:precompiled-2026-08-29-1733af0
     environment:
       - SERVICE_URL_DASHBOARD_6791
       # URL of the Convex API as accessed by the dashboard (browser).
@@ -193,7 +193,7 @@ services:
   # data volume once a day (they accumulate after every backup run)
   # ──────────────────────────────────────────────────────────────
   export-cleanup:
-    image: alpine:latest
+    image: alpine:3.22
     depends_on:
       backend:
         condition: service_healthy
