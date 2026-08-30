@@ -85,7 +85,7 @@ services:
   # Convex backend
   # ──────────────────────────────────────────────────────────────
   backend:
-    image: ghcr.io/get-convex/convex-backend:precompiled-2026-08-29-1733af0
+    image: ghcr.io/get-convex/convex-backend:2cbcf8179207eb4521360e6d81ebee5e7abbfa07
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,7 +105,7 @@ services:
       # URL of the Convex API as accessed by the client/frontend.
       - CONVEX_CLOUD_ORIGIN=${SERVICE_URL_BACKEND}
       # URL of Convex HTTP actions as accessed by the client/frontend.
-      - CONVEX_SITE_ORIGIN=${SERVICE_URL_SITE}
+      - CONVEX_SITE_ORIGIN=${CONVEX_SITE_ORIGIN_URL:-${SERVICE_URL_SITE}}
       - DISABLE_BEACON=${DISABLE_BEACON:-true}
       - REDACT_LOGS_TO_CLIENT=${REDACT_LOGS_TO_CLIENT:-false}
       # Postgres is on the internal Docker network -> no SSL needed.
@@ -137,7 +137,7 @@ services:
   # Convex dashboard
   # ──────────────────────────────────────────────────────────────
   dashboard:
-    image: ghcr.io/get-convex/convex-dashboard:precompiled-2026-08-29-1733af0
+    image: ghcr.io/get-convex/convex-dashboard:2cbcf8179207eb4521360e6d81ebee5e7abbfa07
     environment:
       - SERVICE_URL_DASHBOARD_6791
       # URL of the Convex API as accessed by the dashboard (browser).
