@@ -154,8 +154,51 @@ services:
   # Off-site backups -> external AWS S3 or Cloudflare R2
   # https://github.com/orenaksakal/convex-self-hosted-backups
   # ──────────────────────────────────────────────────────────────
-  # backups: removed on dev-pinned — no external S3 target on cras-dev; its crash loop
-  # made Coolify stop the whole stack (max_restart_count). Re-add for staging/prod with creds.
+  backups:
+    build:
+      # Pinned to a commit so deploys are reproducible (was an unpinned `main`).
+      context: https://github.com/orenaksakal/convex-self-hosted-backups.git#41e70aa21bee0b4beba6a6be36f6bb79912d9519
+    depends_on:
+      backend:
+        condition: service_healthy
+    # `unless-stopped` + a misconfigured target = crash loop, and Coolify counts every
+    # crash of ANY container against the app's max_restart_count, then stops the whole
+    # stack (Convex included). So: no auto-restart, and exit 0 when no target is set.
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -z "$$AWS_S3_BUCKET" ] || [ -z "$$AWS_ACCESS_KEY_ID" ]; then
+          echo "[backups] no external S3 target configured (BACKUP_S3_BUCKET / BACKUP_AWS_ACCESS_KEY_ID empty) — backups disabled, exiting cleanly."
+          exit 0
+        fi
+        exec node dist/index.js
+    environment:
+      # Talk to the backend over the internal network.
+      - CONVEX_SELF_HOSTED_URL=${BACKUP_CONVEX_URL:-http://backend:3210}
+      # Generate with: docker compose exec backend ./generate_admin_key.sh
+      - CONVEX_SELF_HOSTED_ADMIN_KEY=${CONVEX_SELF_HOSTED_ADMIN_KEY}
+      # ── External backup target (AWS S3 or Cloudflare R2 — NOT RustFS) ──
+      - AWS_ACCESS_KEY_ID=${BACKUP_AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${BACKUP_AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_BUCKET=${BACKUP_S3_BUCKET}
+      - AWS_S3_REGION=${BACKUP_S3_REGION:-auto}
+      # For R2: https://<ACCOUNT_ID>.r2.cloudflarestorage.com — leave empty for AWS S3.
+      - AWS_S3_ENDPOINT=${BACKUP_S3_ENDPOINT:-}
+      - AWS_S3_FORCE_PATH_STYLE=${BACKUP_S3_FORCE_PATH_STYLE:-false}
+      # ── Backup behaviour ──
+      - BACKUP_FILE_PREFIX=${BACKUP_FILE_PREFIX:-backup}
+      - BUCKET_SUBFOLDER=${BUCKET_SUBFOLDER:-}
+      - INCLUDE_FILE_STORAGE=${INCLUDE_FILE_STORAGE:-true}
+      - RUN_ON_STARTUP=${RUN_ON_STARTUP:-true}
+      - MAX_HOURLY_BACKUPS=${MAX_HOURLY_BACKUPS:-24}
+      - MAX_DAILY_BACKUPS=${MAX_DAILY_BACKUPS:-7}
+      - MAX_WEEKLY_BACKUPS=${MAX_WEEKLY_BACKUPS:-4}
+      - MAX_MONTHLY_BACKUPS=${MAX_MONTHLY_BACKUPS:-12}
+      - BACKUP_MAX_RETRIES=${BACKUP_MAX_RETRIES:-1}
+      - BACKUP_RETRY_DELAY_MS=${BACKUP_RETRY_DELAY_MS:-300000}
+      # Optional failure notifications (Telegram/Discord/Slack via shoutrrr)
+      - SHOUTRRR_URL=${SHOUTRRR_URL:-}
 
   export-cleanup:
     image: alpine:3.22
